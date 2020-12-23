@@ -91,8 +91,8 @@ using PointType = pcl::PointXYZI;
 
 struct SphericalPoint
 {
-    float az; // azimuth 
-    float el; // elevation
+    float az; // azimuth (方位角)
+    float el; // elevation (仰角)
     float r; // radius
 };
 

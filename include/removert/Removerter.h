@@ -17,7 +17,7 @@ private:
 
     std::vector<std::string> sequence_valid_scan_names_;
     std::vector<std::string> sequence_valid_scan_paths_;
-    std::vector<pcl::PointCloud<PointType>::Ptr> scans_;
+    std::vector<pcl::PointCloud<PointType>::Ptr> scans_; //保存所有降采样后的scans
     std::vector<pcl::PointCloud<PointType>::Ptr> scans_static_;
     std::vector<pcl::PointCloud<PointType>::Ptr> scans_dynamic_;
 
@@ -26,7 +26,7 @@ private:
     std::string map_static_save_dir_;
     std::string map_dynamic_save_dir_;
     
-    std::vector<Eigen::Matrix4d> scan_poses_;
+    std::vector<Eigen::Matrix4d> scan_poses_; //所有scan的poses
     std::vector<Eigen::Matrix4d> scan_inverse_poses_;
 
     pcl::KdTreeFLANN<PointType>::Ptr kdtree_map_global_curr_;

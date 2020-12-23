@@ -6,13 +6,13 @@ removert:
   # @ save option 
   saveMapPCD: true 
   saveCleanScansPCD: true
-  save_pcd_directory: "/home/user/Desktop/data/riverside01/removert/results/" # replace to your path (please use an absolute path)
+  save_pcd_directory: "/home/jxl/removert_data/results/" # replace to your path (please use an absolute path)
 
 
   # @ sequence info (replace to your paths) 
   #   please follow the KITTI odometry dataset's scan and pose formats (i.e., make them .bin and line-by-line corresponding se3 poses composed of 12 numbers)
-  sequence_scan_dir: "/home/user/Desktop/data/riverside01/sc-lio-sam/Scans/"
-  sequence_pose_path: "/home/user/Desktop/data/riverside01/sc-lio-sam/optimized_poses.txt"
+  sequence_scan_dir: "/home/jxl/removert_data/Scans/"
+  sequence_pose_path: "/home/jxl/removert_data/optimized_poses.txt"
 
   sequence_vfov: 50 # including upper and lower fovs, 
                     # for example, KITTI's HDL64E is 2 + 24.9 ~ 27 deg. (so 25 + 25 = 50 is recommended because it is enough)
@@ -52,7 +52,7 @@ removert:
 
 
   # @ Range image resolution
-  # the below is actually magnifier ratio (i.e., 5 means x5 resolution, the x1 means 1 deg x 1 deg per pixel)
+  # the below is actually magnifier ratio(放大倍率) (i.e., 5 means x5 resolution, the x1 means 1 deg x 1 deg per pixel)
   # - recommend to use the first removing resolution's magnifier ratio should meet the seonsor vertical fov / number of rays 
   #     - e.g., HDL 64E of KITTI dataset -> appx 25 deg / 64 ray ~ 0.4 deg per pixel -> the magnifier ratio = 1/0.4 = 2.5
   #     - e.g., Ouster OS1-64 of MulRan dataset -> appx 45 deg / 64 ray ~ 0.7 deg per pixel -> the magnifier ratio = 1/0.7 = 1.4

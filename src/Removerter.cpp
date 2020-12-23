@@ -860,6 +860,7 @@ void Removerter::scansideRemovalForEachScanAndSaveThem( void )
 } // scansideRemovalForEachScanAndSaveThem
 
 
+//主入口
 void Removerter::run( void )
 {
     // load scan and poses
