@@ -172,7 +172,15 @@ void Removerter::readValidScans( void )
 } // readValidScans
 
 
-std::pair<cv::Mat, cv::Mat> Removerter::map2RangeImg(const pcl::PointCloud<PointType>::Ptr& _scan, 
+//把map_local_curr_转换成range image: 
+//从最上面行依次到最下面行，点的仰角从最大到最小
+//从最左列依次到最右列，分别对应-180度， 0度， 180度
+//每个像素是每个点的range
+//同时每个点在map_local_curr_点云中的index放置在rimg_ptidx的对应行列，
+//TODO: 应该放置每个点在map_global_curr_点云中的index吗？
+// https://github.com/irapkaist/removert/issues/5
+
+std::pair<cv::Mat, cv::Mat> Removerter::map2RangeImg(const pcl::PointCloud<PointType>::Ptr& _scan, //map_local_curr_
                       const std::pair<float, float> _fov, /* e.g., [vfov = 50 (upper 25, lower 25), hfov = 360] */
                       const std::pair<int, int> _rimg_size)
 {
@@ -193,6 +201,8 @@ std::pair<cv::Mat, cv::Mat> Removerter::map2RangeImg(const pcl::PointCloud<Point
     {   
         PointType this_point = _scan->points[pt_idx];
         SphericalPoint sph_point = cart2sph(this_point);
+        //TODO: 此处每个点的仰角和方位角也在sensor的FOV下吗？
+        //由于map_local_curr_： 地图下的points在base_node_idx_对应的位姿下
 
         // @ note about vfov: e.g., (+ V_FOV/2) to adjust [-15, 15] to [0, 30]
         // @ min and max is just for the easier (naive) boundary checks. 
@@ -202,7 +212,13 @@ std::pair<cv::Mat, cv::Mat> Removerter::map2RangeImg(const pcl::PointCloud<Point
         int upper_bound_col_idx {kNumRimgCol - 1};
         int pixel_idx_row = int(std::min(std::max(std::round(kNumRimgRow * (1 - (rad2deg(sph_point.el) + (kVFOV/float(2.0))) / (kVFOV - float(0.0)))), float(lower_bound_row_idx)), float(upper_bound_row_idx)));
         int pixel_idx_col = int(std::min(std::max(std::round(kNumRimgCol * ((rad2deg(sph_point.az) + (kHFOV/float(2.0))) / (kHFOV - float(0.0)))), float(lower_bound_col_idx)), float(upper_bound_col_idx)));
-
+        
+        //@jxl debug
+        if( (rad2deg(sph_point.el) + (kVFOV/float(2.0))) > kVFOV  ||
+            (rad2deg(sph_point.el) + (kVFOV/float(2.0))) < 0        ){
+            std::printf("point elevation = %l.2f, sensor VFOV = %l.2f \n", (rad2deg(sph_point.el) + (kVFOV/float(2.0))), kVFOV);
+        }
+        
         float curr_range = sph_point.r;
 
         // @ Theoretically, this if-block would have race condition (i.e., this is a critical section), 
@@ -222,6 +238,10 @@ std::pair<cv::Mat, cv::Mat> Removerter::map2RangeImg(const pcl::PointCloud<Point
 } // map2RangeImg
 
 
+//把一帧scan转换成range image:
+//从最上面行依次到最下面行，分别对应+max仰角，-max仰角 
+//从最左列依次到最右列，分别对应-180度， 0度， 180度
+//每个像素是每个点的range
 cv::Mat Removerter::scan2RangeImg(const pcl::PointCloud<PointType>::Ptr& _scan, 
                       const std::pair<float, float> _fov, /* e.g., [vfov = 50 (upper 25, lower 25), hfov = 360] */
                       const std::pair<int, int> _rimg_size)
@@ -252,8 +272,8 @@ cv::Mat Removerter::scan2RangeImg(const pcl::PointCloud<PointType>::Ptr& _scan,
         int upper_bound_col_idx {kNumRimgCol - 1};
         int pixel_idx_row = int(std::min(std::max(std::round(kNumRimgRow * (1 - (rad2deg(sph_point.el) + (kVFOV/float(2.0))) / (kVFOV - float(0.0)))), float(lower_bound_row_idx)), float(upper_bound_row_idx)));
         int pixel_idx_col = int(std::min(std::max(std::round(kNumRimgCol * ((rad2deg(sph_point.az) + (kHFOV/float(2.0))) / (kHFOV - float(0.0)))), float(lower_bound_col_idx)), float(upper_bound_col_idx)));
-
         float curr_range = sph_point.r;
+        //TODO作者默认：sensor的竖直FOV是朝上一半，朝下一半；如果正的仰角和负的仰角不一样多，此处代码需要修改
 
         // @ Theoretically, this if-block would have race condition (i.e., this is a critical section), 
         // @ But, the resulting range image is acceptable (watching via Rviz), 
@@ -271,6 +291,7 @@ cv::Mat Removerter::scan2RangeImg(const pcl::PointCloud<PointType>::Ptr& _scan,
 } // scan2RangeImg
 
 
+//根据每一帧scan在map下的pose,转换到map，累加起来
 void Removerter::mergeScansWithinGlobalCoord( 
         const std::vector<pcl::PointCloud<PointType>::Ptr>& _scans, 
         const std::vector<Eigen::Matrix4d>& _scans_poses,
@@ -293,6 +314,7 @@ void Removerter::mergeScansWithinGlobalCoord(
 } // mergeScansWithinGlobalCoord
 
 
+//对输入点云octree降采样
 void Removerter::octreeDownsampling(const pcl::PointCloud<PointType>::Ptr& _src, pcl::PointCloud<PointType>::Ptr& _to_save)
 {
     pcl::octree::OctreePointCloudVoxelCentroid<PointType> octree( kDownsampleVoxelSize );
@@ -317,7 +339,7 @@ void Removerter::makeGlobalMap( void )
     map_global_orig_->clear();
     map_global_curr_->clear();
 
-    mergeScansWithinGlobalCoord(scans_, scan_poses_, map_global_orig_);
+    mergeScansWithinGlobalCoord(scans_, scan_poses_, map_global_orig_); 
     ROS_INFO_STREAM("\033[1;32m Map pointcloud (having redundant points) have: " << map_global_orig_->points.size() << " points.\033[0m");   
     ROS_INFO_STREAM("\033[1;32m Downsampling leaf size is " << kDownsampleVoxelSize << " m.\033[0m"); 
 
@@ -327,14 +349,14 @@ void Removerter::makeGlobalMap( void )
     octreeDownsampling(map_global_orig_, map_global_curr_);
 
     // save the original cloud 
-    if( kFlagSaveMapPointcloud ) {
+    if( kFlagSaveMapPointcloud ) {//true
         // in global coord
         std::string static_global_file_name = save_pcd_directory_ + "OriginalNoisyMapGlobal.pcd";
         pcl::io::savePCDFileBinary(static_global_file_name, *map_global_curr_);
         ROS_INFO_STREAM("\033[1;32m The original pointcloud is saved (global coord): " << static_global_file_name << "\033[0m");   
 
         // in local coord (i.e., base_node_idx == 0 means a start idx is the identity pose)
-        int base_node_idx = base_node_idx_;    
+        int base_node_idx = base_node_idx_;  //const int = 0  
         pcl::PointCloud<PointType>::Ptr map_local_curr (new pcl::PointCloud<PointType>);
         transformGlobalMapToLocal(map_global_curr_, base_node_idx, map_local_curr);
         std::string static_local_file_name = save_pcd_directory_ + "OriginalNoisyMapLocal.pcd";
@@ -389,6 +411,7 @@ void Removerter::transformGlobalMapToLocal(int _base_scan_idx, pcl::PointCloud<P
 } // transformGlobalMapToLocal
 
 
+//把map下的点云根据给的idx pose转换到那帧scan下
 void Removerter::transformGlobalMapToLocal(
     const pcl::PointCloud<PointType>::Ptr& _map_global, 
     int _base_scan_idx, pcl::PointCloud<PointType>::Ptr& _map_local)
@@ -490,7 +513,12 @@ void Removerter::saveCurrentStaticAndDynamicPointCloudLocal( int _base_node_idx 
 
 } // saveCurrentStaticAndDynamicPointCloudLocal
 
-
+/**
+ * @param _scan_rimg：第k帧scan range image
+ * @param _diff_rimg: 地图下的点转换到第k帧下得到的map range image与scan range image的element wise diff
+ * @param _map_rimg_ptidx: map range image对应行列的point在map_local_curr_点云中的index
+ * @return std::vector<int>： map_local_curr_中动态点云的indexs
+ */
 std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdx
     (const cv::Mat& _scan_rimg, const cv::Mat& _diff_rimg, const cv::Mat& _map_rimg_ptidx)
 {
@@ -531,15 +559,20 @@ void Removerter::takeGlobalMapSubsetWithinBall( int _center_scan_idx )
 
     std::vector<int> subset_indexes;
     std::vector<float> pointSearchSqDisGlobalMap;
+
+    //当执行该语句时， kdtree_map_global_curr_未设置input pointcloud ?
     kdtree_map_global_curr_->radiusSearch(center_pose, kBallSize, subset_indexes, pointSearchSqDisGlobalMap, 0);
     parseMapPointcloudSubsetUsingPtIdx(subset_indexes, map_subset_global_curr_);
 } // takeMapSubsetWithinBall
 
 
+//地图所有points分别转到每帧scan下产生map range image,与每帧scan的range image做差异,计算出dynamic points,
+//返回在每帧map range image对应的map_local_curr_点云中的index，这样对吗？
 std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan( std::pair<int, int> _rimg_shape )
 {   
     std::vector<int> dynamic_point_indexes;
     // dynamic_point_indexes.reserve(100000);
+
     for(std::size_t idx_scan=0; idx_scan < scans_.size(); ++idx_scan) {            
         // curr scan 
         pcl::PointCloud<PointType>::Ptr _scan = scans_.at(idx_scan);
@@ -548,7 +581,7 @@ std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan( 
         cv::Mat scan_rimg = scan2RangeImg(_scan, kFOV, _rimg_shape); // openMP inside
 
         // map's pointcloud to range img 
-        if( kUseSubsetMapCloud ) {
+        if( kUseSubsetMapCloud ) {//const bool = false
             takeGlobalMapSubsetWithinBall(idx_scan);
             transformGlobalMapSubsetToLocal(idx_scan); // the most time comsuming part 1 
         } else {
@@ -644,7 +677,9 @@ void Removerter::removeOnce( float _res_alpha )
 
     // Update the current map and reset the tree
     map_global_curr_->clear();
-    *map_global_curr_ = *map_global_curr_static_;
+    *map_global_curr_ = *map_global_curr_static_; 
+    //第二次，第三次...执行removeOnce()前， map_global_curr_已经被置为在上一次分辨率下得到的静态点云
+
 
     // if(kUseSubsetMapCloud) // NOT recommend to use for under 5 million points map input
     //     kdtree_map_global_curr_->setInputCloud(map_global_curr_); 
@@ -703,6 +738,8 @@ pcl::PointCloud<PointType>::Ptr Removerter::global2local(const pcl::PointCloud<P
     return scan_local;
 }
 
+
+
 std::pair<pcl::PointCloud<PointType>::Ptr, pcl::PointCloud<PointType>::Ptr> 
     Removerter::removeDynamicPointsOfScanByKnn ( int _scan_idx )
 {    
@@ -711,11 +748,10 @@ std::pair<pcl::PointCloud<PointType>::Ptr, pcl::PointCloud<PointType>::Ptr>
     auto scan_pose = scan_poses_.at(_scan_idx);
 
     // curr scan (in global coord)
-    pcl::PointCloud<PointType>::Ptr scan_orig_global = local2global(scan_orig, _scan_idx);
+    pcl::PointCloud<PointType>::Ptr scan_orig_global = local2global(scan_orig, _scan_idx); //每一帧scan在map下的点云
     kdtree_scan_global_curr_->setInputCloud(scan_orig_global); 
     int num_points_of_a_scan = scan_orig_global->points.size();
 
-    // 
     pcl::PointCloud<PointType>::Ptr scan_static_global (new pcl::PointCloud<PointType>); 
     pcl::PointCloud<PointType>::Ptr scan_dynamic_global (new pcl::PointCloud<PointType>); 
     for (std::size_t pt_idx = 0; pt_idx < num_points_of_a_scan; pt_idx++)
@@ -729,11 +765,12 @@ std::pair<pcl::PointCloud<PointType>::Ptr, pcl::PointCloud<PointType>::Ptr>
         std::vector<int> topk_indexes_map;
         std::vector<float> topk_L2dists_map;
         kdtree_map_global_curr_->nearestKSearch(scan_orig_global->points[pt_idx], kNumKnnPointsToCompare, topk_indexes_map, topk_L2dists_map);
+        //kdtree_map_global_curr_: remove结束后，地图中的SM points
+
         float sum_topknn_dists_in_map = accumulate( topk_L2dists_map.begin(), topk_L2dists_map.end(), 0.0);
         float avg_topknn_dists_in_map = sum_topknn_dists_in_map / float(kNumKnnPointsToCompare);
 
-        // 
-        if ( std::abs(avg_topknn_dists_in_scan - avg_topknn_dists_in_map) < kScanKnnAndMapKnnAvgDiffThreshold) {
+        if ( std::abs(avg_topknn_dists_in_scan - avg_topknn_dists_in_map) < kScanKnnAndMapKnnAvgDiffThreshold) {//差异小于阈值，说明该scan的该point为static point
             scan_static_global->push_back(scan_orig_global->points[pt_idx]);
         } else {
             scan_dynamic_global->push_back(scan_orig_global->points[pt_idx]);
@@ -841,8 +878,10 @@ void Removerter::saveMapPointcloudByMergingCleanedScans(void)
 void Removerter::scansideRemovalForEachScan( void )
 {
     // for fast scan-side neighbor search 
-    kdtree_map_global_curr_->setInputCloud(map_global_curr_); 
-
+    kdtree_map_global_curr_->setInputCloud(map_global_curr_); //唯一一处setInputCloud()
+    //remove结束后，地图中的SM points
+    
+    //结合地图中的static points(SM), 把每一帧scan的static和dynamic points区分出来
     // for each scan
     for(std::size_t idx_scan=0; idx_scan < scans_.size(); idx_scan++) {
         auto [this_scan_static, this_scan_dynamic] = removeDynamicPointsOfScanByKnn(idx_scan);
@@ -868,11 +907,13 @@ void Removerter::run( void )
     readValidScans();
 
     // construct initial map using the scans and the corresponding poses 
-    makeGlobalMap();
+    makeGlobalMap(); //对应伪代码第7行
 
     // map-side removals
+    //用多级分辨率range image，对上次得到的SM(static map points)再重新计算SM和DM(dynamic map points)
+    //即不断地对上次SM points删除DM points，直至得到最终的SM points
     for(float _rm_res: remove_resolution_list_) {
-        removeOnce( _rm_res );
+        removeOnce( _rm_res ); //对应论文中的BR(BATCHREMOVAL)
     } 
 
     // if you want to every iteration's map data, place below two lines to inside of the above for loop 

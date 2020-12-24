@@ -17,30 +17,34 @@ private:
 
     std::vector<std::string> sequence_valid_scan_names_;
     std::vector<std::string> sequence_valid_scan_paths_;
-    std::vector<pcl::PointCloud<PointType>::Ptr> scans_; //保存所有降采样后的scans
-    std::vector<pcl::PointCloud<PointType>::Ptr> scans_static_;
-    std::vector<pcl::PointCloud<PointType>::Ptr> scans_dynamic_;
+
+    std::vector<pcl::PointCloud<PointType>::Ptr> scans_; //保存所有降采样后的scans, 每帧scan的points是在各自的sensor frame下
+    std::vector<pcl::PointCloud<PointType>::Ptr> scans_static_;  //每一帧static points
+    std::vector<pcl::PointCloud<PointType>::Ptr> scans_dynamic_; //每一帧dynamic points
 
     std::string scan_static_save_dir_;
     std::string scan_dynamic_save_dir_;
     std::string map_static_save_dir_;
     std::string map_dynamic_save_dir_;
     
-    std::vector<Eigen::Matrix4d> scan_poses_; //所有scan的poses
+    std::vector<Eigen::Matrix4d> scan_poses_; //所有scan的poses，与scans_一一对应
     std::vector<Eigen::Matrix4d> scan_inverse_poses_;
 
     pcl::KdTreeFLANN<PointType>::Ptr kdtree_map_global_curr_;
     pcl::KdTreeFLANN<PointType>::Ptr kdtree_scan_global_curr_;
 
     pcl::PointCloud<PointType>::Ptr map_global_orig_;
+    //所有帧scan在map下点云
 
     pcl::PointCloud<PointType>::Ptr map_global_curr_; // the M_i. i.e., removert is: M1 -> S1 + D1, D1 -> M2 , M2 -> S2 + D2 ... repeat ... 
-    pcl::PointCloud<PointType>::Ptr map_local_curr_;
+    //第一次执行removeOnce()前：经过octree降采样的所有scans在map下的点云
 
-    pcl::PointCloud<PointType>::Ptr map_subset_global_curr_;
+    pcl::PointCloud<PointType>::Ptr map_local_curr_; //地图下的points在每一帧scan下，该变量在不断变化。
 
-    pcl::PointCloud<PointType>::Ptr map_global_curr_static_; // the S_i
-    pcl::PointCloud<PointType>::Ptr map_global_curr_dynamic_;  // the D_i
+    pcl::PointCloud<PointType>::Ptr map_subset_global_curr_; //以每帧位姿为中心，距离一定距离的地图下的points, 所以叫subset，该变量在不断变化。
+
+    pcl::PointCloud<PointType>::Ptr map_global_curr_static_; // the S_i    地图中的静态points，不段地在变化
+    pcl::PointCloud<PointType>::Ptr map_global_curr_dynamic_;  // the D_i  地图中的动态points，不段地在变化
 
     pcl::PointCloud<PointType>::Ptr map_global_accumulated_static_; // TODO, the S_i after reverted
     pcl::PointCloud<PointType>::Ptr map_global_accumulated_dynamic_;  // TODO, the D_i after reverted 

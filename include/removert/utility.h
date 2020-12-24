@@ -91,8 +91,8 @@ using PointType = pcl::PointXYZI;
 
 struct SphericalPoint
 {
-    float az; // azimuth (方位角)
-    float el; // elevation (仰角)
+    float az; // azimuth (方位角),  [-pi, pi]
+    float el; // elevation (仰角)  [-max, +max]
     float r; // radius
 };
 
@@ -126,7 +126,7 @@ std::set<int> convertIntVecToSet(const std::vector<int> & v);
 
 template <typename T>
 std::vector<T> linspace(T a, T b, size_t N) {
-    T h = (b - a) / static_cast<T>(N-1);
+    T h = (b - a) / static_cast<T>(N-1); //h == 1
     std::vector<T> xs(N);
     typename std::vector<T>::iterator x;
     T val;

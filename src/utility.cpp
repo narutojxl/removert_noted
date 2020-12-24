@@ -100,7 +100,7 @@ void publishPointcloud2FromPCLptr(const ros::Publisher& _scan_publisher, const p
     sensor_msgs::PointCloud2 tempCloud;
     pcl::toROSMsg(*_scan, tempCloud);
     tempCloud.header.stamp = ros::Time::now();
-    tempCloud.header.frame_id = "removert";
+    tempCloud.header.frame_id = "removert"; //sensor frame, such as "laser link"
     _scan_publisher.publish(tempCloud);
 } // publishPointcloud2FromPCLptr
 
