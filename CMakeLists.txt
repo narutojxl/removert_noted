@@ -11,7 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   cv_bridge
   # pcl library
-  pcl_conversions
+  # pcl_conversions
   # msgs
   std_msgs
   sensor_msgs
@@ -22,7 +22,16 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(OpenMP REQUIRED)
-find_package(PCL REQUIRED QUIET)
+
+
+#find_package(PCL REQUIRED QUIET)
+#list(APPEND CMAKE_PREFIX_PATH "/home/jxl/third_softwares/pcl-1.8.1/INSTALL/")
+#set(CMAKE_PREFIX_PATH "/home/jxl/third_softwares/pcl-1.8.1/INSTALL/")
+set(PCL_DIR "/home/jxl/third_softwares/pcl-1.8.1/INSTALL/share/pcl-1.8/") #use locall installed pcl
+find_package(PCL 1.8 REQUIRED QUIET)
+
+
+
 find_package(OpenCV REQUIRED QUIET)
 # find_package(GTSAM REQUIRED QUIET)
 
