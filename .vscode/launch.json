@@ -1,0 +1,34 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "g++-5 - 生成和调试活动文件",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/jxl/jxl_remove_ws/src/removert_noted/build/devel/lib/removert/test_pcl",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "/home/jxl/third_softwares/cmake-3.14.2/INSTALL/bin/cmake:$PATH"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "C/C++: g++-5 build active file",
+            "miDebuggerPath": "/usr/bin/gdb"
+        }
+    ]
+}

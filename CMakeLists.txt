@@ -102,3 +102,7 @@ target_link_libraries(${PROJECT_NAME}_removert
 )
 
 
+add_executable(test_pcl  src/test_pcl.cpp)
+target_link_libraries(test_pcl   ${PCL_LIBRARIES} )
+
+

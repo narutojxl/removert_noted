@@ -176,10 +176,7 @@ void Removerter::readValidScans( void )
 //从最上面行依次到最下面行，点的仰角从最大到最小
 //从最左列依次到最右列，分别对应-180度， 0度， 180度
 //每个像素是每个点的range
-//同时每个点在map_local_curr_点云中的index放置在rimg_ptidx的对应行列，
-//TODO: 应该放置每个点在map_global_curr_点云中的index吗？
-// https://github.com/irapkaist/removert/issues/5
-
+//同时每个点在map_local_curr_点云中的index放置在rimg_ptidx的对应行列
 std::pair<cv::Mat, cv::Mat> Removerter::map2RangeImg(const pcl::PointCloud<PointType>::Ptr& _scan, //map_local_curr_
                       const std::pair<float, float> _fov, /* e.g., [vfov = 50 (upper 25, lower 25), hfov = 360] */
                       const std::pair<int, int> _rimg_size)
@@ -380,7 +377,7 @@ void Removerter::transformGlobalMapSubsetToLocal(int _base_scan_idx)
     Eigen::Matrix4d base_pose_inverse = scan_inverse_poses_.at(_base_scan_idx);
     
     // global to local (global2local)
-    map_local_curr_->clear();
+    map_local_curr_->clear();  
     pcl::transformPointCloud(*map_subset_global_curr_, *map_local_curr_, base_pose_inverse);
     pcl::transformPointCloud(*map_local_curr_, *map_local_curr_, kSE3MatExtrinsicPoseBasetoLiDAR);
 
@@ -392,7 +389,7 @@ void Removerter::transformGlobalMapToLocal(int _base_scan_idx)
     Eigen::Matrix4d base_pose_inverse = scan_inverse_poses_.at(_base_scan_idx);
     
     // global to local (global2local)
-    map_local_curr_->clear();
+    map_local_curr_->clear();  //jxl： input cloud and output cloud's index do not change
     pcl::transformPointCloud(*map_global_curr_, *map_local_curr_, base_pose_inverse);
     pcl::transformPointCloud(*map_local_curr_, *map_local_curr_, kSE3MatExtrinsicPoseBasetoLiDAR);
 
@@ -567,7 +564,7 @@ void Removerter::takeGlobalMapSubsetWithinBall( int _center_scan_idx )
 
 
 //地图所有points分别转到每帧scan下产生map range image,与每帧scan的range image做差异,计算出dynamic points,
-//返回在每帧map range image对应的map_local_curr_点云中的index，这样对吗？
+//返回在每帧map range image对应的map_local_curr_点云中的index
 std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan( std::pair<int, int> _rimg_shape )
 {   
     std::vector<int> dynamic_point_indexes;
